@@ -1,0 +1,12 @@
+stage: dev 
+org: downbelow 
+app: downbelow-front-end-test 
+name: downbelow-front-end-react
+component: website 
+
+inputs:
+  region: us-east-2
+  src: ./build
+  bucketName: downbelow-front-end-test
+  indexDocument: index.html
+  errorDocument: index.html
