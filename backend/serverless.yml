@@ -1,0 +1,770 @@
+service: downbelow-api
+frameworkVersion: '2'
+
+layers:
+  commonLibs:
+    path: layer
+    compatibleRuntimes:
+      - nodejs14.x
+  commonLibs2:
+    path: layer2
+    compatibleRuntimes:
+      - nodejs14.x      
+
+package:
+  exclude:
+    - node_modules/**
+    - migrations/**
+    - models/**
+    - seeders/**
+  excludeDevDependencies: true
+  individually: true
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'development'}
+  region: ${file(config/config.json):${sls:stage}.region}
+  memorySize: 1024
+  timeout: 300
+  lambdaHashingVersion: 20201221
+  environment:
+    V_API: ${file(config/config.json):${sls:stage}.v_api}
+    DB_DIALECT: ${file(config/config.json):${sls:stage}.dialect}
+    DB_HOST: ${file(config/config.json):${sls:stage}.host}
+    DB_PORT: 3306
+    DB_DATABASE: ${file(config/config.json):${sls:stage}.database}
+    DB_USERNAME: ${file(config/config.json):${sls:stage}.username}
+    DB_PASSWORD: ${file(config/config.json):${sls:stage}.password}
+    REGION: ${file(config/config.json):${sls:stage}.region}
+    STAGE: ${sls:stage}
+    DOMAIN: ${file(config/config.json):${sls:stage}.domain}
+    JWT_SECRET: ${file(config/config.json):${sls:stage}.jwt_secret}
+    JWT_EXPIRESIN: ${file(config/config.json):${sls:stage}.jwt_expiresin}
+    BLOCKCHAIN_NETWORK: ${file(config/config.json):${sls:stage}.blockchain_network}
+    BLOCKCHAIN_RPC: ${file(config/config.json):${sls:stage}.blockchain_rpc}
+    WALLET_ADDRESS_DOWN_BELOW: ${file(config/config.json):${sls:stage}.wallet_address_down_below}
+  deploymentBucket:
+    name: downbelow-api
+    serverSideEncryption: AES256
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "ses:SendEmail"
+        - "lambda:*"
+      Resource: "*"
+
+functions:
+  verification:
+    handler: src/functions/auth/verification.validate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+  home:
+    handler: src/functions/home/home.homeShow
+    memorySize: 128
+    timeout: 300
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /
+  login:
+    handler: src/functions/auth/login.login
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/login
+  refreshToken:
+    handler: src/functions/auth/refreshToken.refreshToken
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/refreshToken
+  accessCode:
+    handler: src/functions/auth/accessCode.accessCodeCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/accessCode
+  passwordResetsCreate:
+    handler: src/functions/auth/passwordResets.passwordResetsCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/passwordResets
+  passwordResetsActive:
+    handler: src/functions/auth/passwordResets.passwordResetsActive
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/passwordActive
+  activeCode:
+    handler: src/functions/auth/activeCode.activeCodeActive
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/activeCode          
+  sendEmail:
+    handler: src/functions/sendEmail/sendEmail.send
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/sendEmail        
+  userShow:
+    handler: src/functions/user/user.userShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/user
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/user/{id}
+          authorizer: 
+            name: verification    
+  userCreate:
+    handler: src/functions/user/user.userCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/user
+  floorShow:
+    handler: src/functions/floor/floor.floorShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/floor
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/floor/{id}
+          authorizer:
+            name: verification    
+  floorCreate:
+    handler: src/functions/floor/floor.floorCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/floor
+          authorizer:
+            name: verification
+  weaponShow:
+    handler: src/functions/weapon/weapon.weaponShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/weapon
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/weapon/{id}
+          authorizer:
+            name: verification    
+  weaponCreate:
+    handler: src/functions/weapon/weapon.weaponCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/weapon
+          authorizer:
+            name: verification        
+  skillShow:
+    handler: src/functions/skill/skill.skillShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/skill
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/skill/{id}
+          authorizer:
+            name: verification    
+  skillCreate:
+    handler: src/functions/skill/skill.skillCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/skill
+          authorizer:
+            name: verification
+  characterShow:
+    handler: src/functions/character/character.characterShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/character
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/character/{id}
+          authorizer:
+            name: verification    
+  characterCreate:
+    handler: src/functions/character/character.characterCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/character
+          authorizer:
+            name: verification
+  partyShow:
+    handler: src/functions/party/party.partyShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/party
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/party/{id}
+          authorizer:
+            name: verification    
+  partyCreate:
+    handler: src/functions/party/party.partyCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/party
+          authorizer:
+            name: verification
+  partyUpdatePartyAp:
+    handler: src/functions/party/party.partyUpdatePartyAp
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/partyUpdatePartyAp
+          authorizer:
+            name: verification
+  partyContractShow:
+    handler: src/functions/partyContract/partyContract.partyContractShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/partyContract
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/partyContract/{id}
+          authorizer:
+            name: verification    
+  partyContractCreate:
+    handler: src/functions/partyContract/partyContract.partyContractCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/partyContract
+          authorizer:
+            name: verification
+  partyContractBreachOfContract:
+    handler: src/functions/partyContract/partyContract.partyContractBreachOfContract
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/breachOfContract
+          authorizer:
+            name: verification
+  idlePVEShow:
+    handler: src/functions/idlePVE/idlePVE.idlePVEShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/idlePVE
+          authorizer:
+            name: verification
+  idlePVE:
+    handler: src/functions/idlePVE/idlePVE.idlePVEResult
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/idlePVEResult
+          authorizer:
+            name: verification
+  starterPacksShow:
+    handler: src/functions/starterPacks/starterPacks.starterPacksShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: false
+          path: /${file(config/config.json):${sls:stage}.v_api}/starterPacks
+          authorizer:
+            name: verification
+  whitelistShow:
+    handler: src/functions/whitelist/whitelist.whitelistShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/whitelist/{id}
+          authorizer:
+            name: verification
+  generateBaseStatusShow:
+    handler: src/functions/generateBaseStatus/generateBaseStatus.generateBaseStatusShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/generateBaseStatus
+          authorizer:
+            name: verification
+  generateBaseStatusCreate:
+    handler: src/functions/generateBaseStatus/generateBaseStatus.generateBaseStatusCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/generateBaseStatus
+          authorizer:
+            name: verification
+  generateUserCharacterSkillWeaponCreate:
+    handler: src/functions/generateBaseStatus/generateBaseStatus.generateUserCharacterSkillWeaponCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/generateUserCharacterSkillWeapon
+          authorizer:
+            name: verification
+  productShow:
+    handler: src/functions/product/product.productShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/product
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/product/{id}
+          authorizer:
+            name: verification    
+  productCreate:
+    handler: src/functions/product/product.productCreate
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/product
+          authorizer:
+            name: verification
+  saleShow:
+    handler: src/functions/sale/sale.saleShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/sale
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/sale/{id}
+          authorizer:
+            name: verification        
+  saleCreate:
+    handler: src/functions/sale/sale.saleCreate
+    timeout: 600
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/sale
+          authorizer:
+            name: verification
+  userCharacterShow:
+    handler: src/functions/userCharacter/userCharacter.userCharacterShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userCharacter
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userCharacter/{id}
+          authorizer:
+            name: verification          
+  userCharacterEquip:
+    handler: src/functions/userCharacter/userCharacter.userCharacterEquip
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userCharacterEquip
+          authorizer:
+            name: verification
+  userCharacterRetire:
+    handler: src/functions/userCharacter/userCharacter.userCharacterRetire
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userCharacter/retire
+          authorizer:
+            name: verification
+  userCharacterSaleCreate:
+    handler: src/functions/userCharacter/userCharacterSale.userCharacterSaleCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userCharacterSale
+          authorizer:
+            name: verification
+  userWeaponShow:
+    handler: src/functions/userWeapon/userWeapon.userWeaponShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userWeapon
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userWeapon/{id}
+          authorizer:
+            name: verification
+  userWeaponRetire:
+    handler: src/functions/userWeapon/userWeapon.userWeaponRetire
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userWeapon/retire
+          authorizer:
+            name: verification
+  userWeaponSaleCreate:
+    handler: src/functions/userWeapon/userWeaponSale.userWeaponSaleCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userWeaponSale
+          authorizer:
+            name: verification
+  userSkillShow:
+    handler: src/functions/userSkill/userSkill.userSkillShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userSkill
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userSkill/{id}
+          authorizer:
+            name: verification
+  userSkillRetire:
+    handler: src/functions/userSkill/userSkill.userSkillRetire
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userSkill/retire
+          authorizer:
+            name: verification
+  userSkillSaleCreate:
+    handler: src/functions/userSkill/userSkillSale.userSkillSaleCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userSkillSale
+          authorizer:
+            name: verification
+  userStarterPacksShow:
+    handler: src/functions/userStarterPacks/userStarterPacks.userStarterPacksShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userStarterPacks
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userStarterPacks/{id}
+          authorizer:
+            name: verification
+  userPartyShow:
+    handler: src/functions/userParty/userParty.userPartyShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userParty
+          authorizer:
+            name: verification
+  claimCreate:
+    handler: src/functions/claim/claim.claimCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/claim
+          authorizer:
+            name: verification
+  depositShow:
+    handler: src/functions/deposit/deposit.depositShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/deposit
+          authorizer:
+            name: verification
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/deposit/{id}
+          authorizer:
+            name: verification
+  depositCreate:
+    handler: src/functions/deposit/deposit.depositCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/deposit
+  depositCheckPending:
+    handler: src/functions/deposit/deposit.depositCheckPending
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/depositCheckPending
+  userCharacterValidator:
+    handler: src/functions/characterValidator/characterValidator.userBonusIsFullGenesis
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/userCharacterValidator
+  withdrawShow:
+    handler: src/functions/withdraw/withdraw.withdrawShow
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: get
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/withdraw
+          authorizer:
+            name: verification
+  withdrawCreate:
+    handler: src/functions/withdraw/withdraw.withdrawCreate
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: post
+          cors: true
+          path: /${file(config/config.json):${sls:stage}.v_api}/withdraw
+          authorizer:
+            name: verification
+  totalCoinShow:
+    handler: src/functions/totalCoin/totalCoin.totalCoinShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+      - { Ref: CommonLibs2LambdaLayer }
+    events:
+      - http:
+          method: get
+          path: /totalCoin
+  checkVersion:
+    handler: src/functions/checkVersion/checkVersion.checkVersionShow
+    timeout: 300
+    layers:
+      - { Ref: CommonLibsLambdaLayer }
+    events:
+      - http:
+          method: get
+          path: /checkVersion/{id}        

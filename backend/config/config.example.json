@@ -1,0 +1,47 @@
+{
+  "development": {
+    "username": "root",
+    "password": null,
+    "database": "database",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "region": "us-east-2",
+    "domain": "https://ex.com/test",
+    "email": "support@downbelow.io",
+    "jwt_secret": "x0",
+    "jwt_expiresin": "60m",
+    "blockchain_network": "ETH",
+    "blockchain_rpc": "https://data-seed-prebsc-1-s1.binance.org:8545",
+    "wallet_address_down_below": "0x"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "database",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "region": "us-east-2",
+    "domain": "https://ex.com/test",
+    "email": "support@downbelow.io",
+    "jwt_secret": "x0",
+    "jwt_expiresin": "60m",
+    "blockchain_network": "ETH",
+    "blockchain_rpc": "https://data-seed-prebsc-1-s1.binance.org:8545",
+    "wallet_address_down_below": "0x"
+  },
+  "production": {
+    "username": "root",
+    "password": null,
+    "database": "database",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "region": "us-east-2",
+    "domain": "https://ex.com/test",
+    "email": "support@downbelow.io",
+    "jwt_secret": "x0",
+    "jwt_expiresin": "60m",
+    "blockchain_network": "ETH",
+    "blockchain_rpc": "https://data-seed-prebsc-1-s1.binance.org:8545",
+    "wallet_address_down_below": "0x"
+  }
+}

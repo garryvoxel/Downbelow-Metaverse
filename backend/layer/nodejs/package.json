@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "aws-api-gateway-client": "^0.3.7",
+    "aws-sdk": "^2.1034.0",
+    "bcryptjs": "^2.4.3",
+    "install": "^0.13.0",
+    "jsonwebtoken": "^8.5.1",
+    "moment": "^2.29.1",
+    "mysql2": "^2.3.3-rc.0",
+    "npm": "^8.1.4",
+    "rand-token": "^1.0.1",
+    "sequelize": "^6.9.0",
+    "sequelize-paginate": "^1.1.6"
+  },
+  "devDependencies": {}
+}
